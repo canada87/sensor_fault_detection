@@ -26,6 +26,7 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 
 def work_function(train_X, train_y, test_X, test_Y, select_mod, verbose = 0, save = 'no', load = 'no', name = 'models'):
+    # distingue se il modello predice un solo numero in uscita o piu di uno
     try:
         col_operator = train_y.columns
         multi_target = True
@@ -33,30 +34,31 @@ def work_function(train_X, train_y, test_X, test_Y, select_mod, verbose = 0, sav
         col_operator = train_y.name
         multi_target = False
 
-    learn = learning_reg()
+    learn = learning_reg()# inizializzo la classe delle predizioni
     if load == 'no':
-        models = learn.get_models(select_mod)
-        models, _ = learn.train_models(models, train_X, train_y)
+        models = learn.get_models(select_mod)# carico i modelli di interesse
+        models, _ = learn.train_models(models, train_X, train_y)# traino i modelli scelti
         if save == 'yes':
-            learn.save_model(models, name)
+            learn.save_model(models, name)# salvo i modelli dopo il training
     else:
-        models = learn.load_model(name)
+        models = learn.load_model(name)# carico dei modelli gia trainati
 
-    Predict_matrix = learn.predict_matrix_generator(models, test_X, multi_target = multi_target)
+    Predict_matrix = learn.predict_matrix_generator(models, test_X, multi_target = multi_target)# faccio una predizione sul test set
 
     if multi_target:
         for col in col_operator:
             st.header(col)
-            y_test_target, y_pred_matrix_traget = learn.from_multilabel_to_single(test_Y, Predict_matrix, col)
-            learn.score_models(y_test_target, y_pred_matrix_traget, verbose = 1)
+            y_test_target, y_pred_matrix_traget = learn.from_multilabel_to_single(test_Y, Predict_matrix, col)# se il modello predice piu uscite qui vengono selte a rotazione ciascuna di esse per poter mostrare lo score del test
+            learn.score_models(y_test_target, y_pred_matrix_traget, verbose = 1)# scoring sul test set
             st.pyplot()
 
     else:
-        learn.score_models(test_Y, Predict_matrix, verbose = verbose)
+        learn.score_models(test_Y, Predict_matrix, verbose = verbose)# scoring sul test set (singola uscita del modello)
         st.pyplot()
-    return learn.predict_matrix_generator(models, train_X, multi_target = multi_target), Predict_matrix
+    return learn.predict_matrix_generator(models, train_X, multi_target = multi_target), Predict_matrix # ritorna sia le predizioni del train set che del test set
 
 def deploy_function(train_X, train_y, select_mod, save = 'no', load = 'no', name = 'deploy_models'):
+    # distingue se il modello predice un solo numero in uscita o piu di uno
     try:
         col_operator = train_y.columns
         multi_target = True
@@ -64,26 +66,29 @@ def deploy_function(train_X, train_y, select_mod, save = 'no', load = 'no', name
         col_operator = train_y.name
         multi_target = False
 
-    learn = learning_reg()
+    learn = learning_reg()# inizializzo la classe delle predizioni
     if load == 'no':
-        models = learn.get_models(select_mod)
-        models, _ = learn.train_models(models, train_X, train_y)
+        models = learn.get_models(select_mod)# carico i modelli di interesse
+        models, _ = learn.train_models(models, train_X, train_y)# traino i modelli scelti
         if save == 'yes':
-            learn.save_model(models, name)
+            learn.save_model(models, name)# salvo i modelli dopo il training
     else:
-        models = learn.load_model(name)
-    Predict_matrix = learn.predict_matrix_generator(models, train_X, multi_target = multi_target)
+        models = learn.load_model(name)# carico dei modelli gia trainati
+    Predict_matrix = learn.predict_matrix_generator(models, train_X, multi_target = multi_target)# faccio una predizione sul test set
 
-    return learn, models, Predict_matrix
+    return learn, models, Predict_matrix # ritorna la classe inizializzata, i modelli trainati e le predizioni dati usati per il training
 
+# carico i dati
 df = pd.read_csv('steel_temperature.csv', delimiter=';', index_col=0)
 ####################################################################
 ####################################################################
+# seleziono un sotto campione random dei dati
 df = df.sample(n=1000)
 df = df.reset_index(drop=True)
 ####################################################################
 ####################################################################
 
+# olotto 4 set di dati scelti casualmente
 ds().nuova_fig(1)
 ds().titoli(titolo='4 random examples')
 sample_plot = df.loc[:,['D'+str(i) for i in range(0,12)]].sample(n=4).reset_index(drop = True)
@@ -91,12 +96,14 @@ for i in range(4):
     ds().dati(x = np.arange(sample_plot.shape[1]), y=sample_plot.loc[i,:], colore= palette[i])
 st.pyplot()
 
+# credo un menu laterale per controllare il tipo di analisi
 mod = st.sidebar.radio('modality', ['test','deploy'])
 chain = st.sidebar.radio('Chain of models', ['no','yes'])
 save_mod = st.sidebar.radio('save model', ['no','yes'])
 load_mod = st.sidebar.radio('load model', ['no','yes'])
 select_mod = st.sidebar.multiselect('which models', ['RandomForestRegressor', 'LinearRegression','ExtraTreesRegressor','DecisionTreeRegressor','ExtraTreeRegressor','BaggingRegressor'], default = ['RandomForestRegressor', 'LinearRegression'])
 
+# analisi del numero di classi prenseti nei dati
 st.header('Elbow Method')
 sse={}
 for k in range(1, 10):
@@ -107,6 +114,7 @@ plt.plot(list(sse.keys()), list(sse.values()))
 plt.xlabel("Number of cluster")
 st.pyplot()
 
+# lascio scegliere all'utente il numero di classi presenti per poi generare la classificazione dei dati
 n_clusters = int(st.text_input('number of clusters', 4))
 st.header('quality evaluation')
 kmeans = KMeans(n_clusters=n_clusters)
@@ -132,8 +140,10 @@ start = st.button('start')
 check_controll = st.checkbox('controller')
 if check_controll and start:
     st.title('Training the Controller')
-    st.subheader('The controller observes all the temperature along with the room temperature and the quality history and establishes the spead')
+    st.subheader('The controller observes all the temperatures along with the room temperature and the quality history and establishes the spead')
     st.latex(r'''T_1 T_2 T_3 T_4 T_{Room} Q = V''')
+
+    # leggo solo le variabili che mi interessano
     col_controller = []
     for i in range(13):
         col_controller.append('D'+str(i))
@@ -144,13 +154,16 @@ if check_controll and start:
     st.write(df_controller.head())
     st.write(df_controller.shape)
 
+    # divido in features e targets
     df_controller_X = df_controller.drop(['vel'], axis = 1)
     df_controller_Y = df_controller['vel']
 
+    # genero il train e test
     controller_train_x, controller_test_x, controller_train_y, controller_test_y =  train_test_split(df_controller_X, df_controller_Y, test_size = 0.3, shuffle=False)
     controller_train_x, controller_test_x = controller_train_x.reset_index(drop = True), controller_test_x.reset_index(drop = True)
     controller_train_y, controller_test_y = controller_train_y.reset_index(drop = True), controller_test_y.reset_index(drop = True)
 
+    # lancio il modello
     if mod == 'test':
         controll_train, controll_test = work_function(controller_train_x, controller_train_y, controller_test_x, controller_test_y, select_mod, verbose = 1)
     else:
@@ -168,20 +181,24 @@ if check_operator and start:
     st.subheader('The global operator observes all the temperature along with the room temperature and the quality history and speed, and establishes the preassure on each section')
     st.latex(r'''T_1 T_2 T_3 T_4 V T_{Room} Q = P_1 P_2 P_3 P_4''')
 
+    #scelgo le variabili che mi interessano
     col_operator = []
     for i in range(1,13):
         col_operator.append('P'+str(i))
 
+    # divico in targets e features
     df_operator_X = df.drop(col_operator, axis = 1)
     df_operator_Y = df.loc[:,col_operator]
 
     st.write(df_operator_X.head())
     st.write(df_operator_Y.head())
 
+    # divido in train e test
     operator_train_x, operator_test_x, operator_train_y, operator_test_y =  train_test_split(df_operator_X, df_operator_Y, test_size = 0.3, shuffle=False)
     operator_train_x, operator_test_x = operator_train_x.reset_index(drop = True), operator_test_x.reset_index(drop = True)
     operator_train_y, operator_test_y = operator_train_y.reset_index(drop = True), operator_test_y.reset_index(drop = True)
 
+    # lancio il modello
     if mod == 'test':
         if chain == 'yes':
             operator_train_x['vel'] = controll_train['Ensamble']
@@ -205,6 +222,7 @@ if check_master and start:
     st.write('the first temperature is known and it is not predicted')
     st.latex(r'''T_1 T_3 T_4 V T_{Room} Q = T_2''')
 
+    # scelgo le variabili che mi interessano
     col_operator = []
     for i in range(13):
         col_operator.append('D'+str(i))
@@ -216,17 +234,21 @@ if check_master and start:
     st.write(df_master.head())
     st.write(df_master.shape)
 
+    # faccio girare il modello su ogni segmento, visto che ogni segmento avra il suo ML dedicato
     for i in range(1,13):
         if mod == 'test':
             st.header('D'+str(i))
 
+        # divido in features e targets
         df_master_X = df_master.drop(['D'+str(i)], axis = 1)
         df_master_Y = df_master['D'+str(i)]
 
+        # divito in train e test
         master_train_x, master_test_x, master_train_y, master_test_y =  train_test_split(df_master_X, df_master_Y, test_size = 0.3, shuffle=False)
         master_train_x, master_test_x = master_train_x.reset_index(drop = True), master_test_x.reset_index(drop = True)
         master_train_y, master_test_y = master_train_y.reset_index(drop = True), master_test_y.reset_index(drop = True)
 
+        # lancio il modello
         if mod == 'test':
             if chain == 'yes':
                 master_train_x['vel'] = controll_train['Ensamble']
@@ -249,8 +271,9 @@ if check_slave and start:
     st.subheader('the slave observe the incoming temperature, T room and speed and the desired output temperature and it establishes the preassure. Each segment works indipendently.')
     st.latex(r'''T_1 T_2 V T_{Room} = P_2''')
 
-
+    # genero un modello per ogni segmento, dato che ogni segmento avra il suo ML dedicato
     for ii in range(0,12):
+        # scelgo le variabili che mi interessano
         col_operator = []
         col_operator.append('D'+str(ii))
         col_operator.append('D'+str(ii+1))
@@ -264,13 +287,16 @@ if check_slave and start:
             st.write(df_slave.shape)
             st.header('P'+str(ii+1))
 
+        # divido in features e targets
         df_slave_X = df_slave.drop(['P'+str(ii+1)], axis = 1)
         df_slave_Y = df_slave['P'+str(ii+1)]
 
+        # divido in train e test
         slave_train_x, slave_test_x, slave_train_y, slave_test_y =  train_test_split(df_slave_X, df_slave_Y, test_size = 0.3, shuffle=False)
         slave_train_x, slave_test_x = slave_train_x.reset_index(drop = True), slave_test_x.reset_index(drop = True)
         slave_train_y, slave_test_y = slave_train_y.reset_index(drop = True), slave_test_y.reset_index(drop = True)
 
+        # lancio il modello
         if mod == 'test':
             if chain == 'yes':
                 slave_train_x['D'+str(ii+1)] = master_train['Ensamble']
@@ -295,18 +321,22 @@ if check_supervisor and start:
     st.write('the supervisor works alone, does not need any submitted model')
     st.latex(r'''T_1 T_2 T_3 T_4 T_{Room} Q = P_1 P_2 P_3 P_4 V''')
 
-
+    # scelgo le variabili che mi interessano
     col_y = ['P'+str(i) for i in range(1,13)]
     col_y.append('vel')
 
+    # divido in features e targets
     df_supervisor_X = df.drop(col_y, axis = 1)
     df_supervisro_Y = df.loc[:,col_y]
 
     st.write(df_supervisor_X.head())
 
+    # divido in train e test
     supervisor_train_x, supervisor_test_x, supervisor_train_y, supervisor_test_y =  train_test_split(df_supervisor_X, df_supervisro_Y, test_size = 0.3, shuffle=False)
     supervisor_train_x, supervisor_test_x = supervisor_train_x.reset_index(drop = True), supervisor_test_x.reset_index(drop = True)
     supervisor_train_y, supervisor_test_y = supervisor_train_y.reset_index(drop = True), supervisor_test_y.reset_index(drop = True)
+
+    # lancio il modello
     if mod == 'test':
         work_function(supervisor_train_x, supervisor_train_y, supervisor_test_x, supervisor_test_y, select_mod, verbose = 1)
     else:
@@ -328,6 +358,7 @@ st.subheader('Controller -> Master -> Slave')
 T_prova = [1299, 1287, 1269, 1276, 1206, 1232, 1267, 1232, 1253, 1217, 1273,  1244, 1211]
 
 if mod == 'deploy':
+    # leggo le variabili dall'utente
     T = [0 for i in range(13)]
     T[0] = float(st.text_input('T0',T_prova[0]))
     T[1] = float(st.text_input('T1',T_prova[1]))
@@ -345,17 +376,20 @@ if mod == 'deploy':
     T_room = float(st.text_input('TRoom',25))
     Q = float(st.text_input('Quality',0))
 
+    # normalizzo la temperatura
     T = np.array(T)/100
     T = T.tolist()
     T.append(T_room)
     T.append(Q)
 
+    # inserisco tutte le variabili che mi servono in un vettore
     cols = ['T'+str(i) for i in range(13)]
     cols.append('TRoom')
     cols.append('Quality')
     querry = pd.DataFrame(T).T
     querry.columns = cols
 
+    # una volta che i modelli sono creati e allenati, qui vengono chiamati per fare la predizione sul singolo set di dati forniti dall'utente
     if check_supervisor:
         Predict_matrix = supervisor_learn.predict_matrix_generator(supervisor_models, querry, multi_target = True)
         st.write(Predict_matrix['Ensamble'])
